@@ -84,7 +84,12 @@ class RecessionDatasetBuilder:
             index=target.index
         )      
 
-    def _get_target(self, start_date: str | pd.Timestamp, window: int):
+    def _get_target(self, start_date: str | pd.Timestamp, window: int) -> pd.Series:
+        """
+        Returns a Series indexed by months, starting at start_date and ending at current month
+        less the window size. Values are 1 when there is a recession within the window, and 0
+        otherwise.
+        """
         recessions = get_recessions(start_date)
 
         month_offset = pd.DateOffset(months=window)
