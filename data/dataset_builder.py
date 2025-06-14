@@ -6,57 +6,62 @@ from data.helpers import get_recessions
 
 class RecessionDatasetBuilder:
     """
-    Provides an interface for creating training data selecting features,
-    choosing lags, choosing the window size, and start date.
+    Builds training data for recession prediction using selected macroeconomic features,
+    their lags, a target window, and a custom start date.
     """
     def __init__(self):
         """
-        Loads potential features.
+        Initializes and loads available macroeconomic features.
         """
-        self.all_features = self._get_all_features()
+        self.all_features = self._load_all_features()
 
-    def _get_all_features(self):
+    def _load_all_features(self) -> dict[str, pd.Series]:
         """
-        Returns a dictionary mapping names to series for all potentional
-        macroeconomic variables. Fills in any interior missing values with
-        linear interpolation.
+        Fetches and preprocesses macroeconomic time series data. Each series is either reported
+        monthly or quarterly. Gaps are imputed with linear interpolation.
         """
-        features = {}
-
-        features["Real GDP"] = fred.get_series("GDPC1").pct_change(1)[1:] * 100
-        features["Unemployment Rate"] = fred.get_series("UNRATE").diff(1)[1:]
-        features["Nonfarm Payrolls"] = fred.get_series("PAYEMS").pct_change(1)[1:] * 100
-        features["Inflation"] = fred.get_series("CORESTICKM159SFRBATL")[1:]
-        # features["Industrial Production Index"] = fre  
+        features = {
+            "Real GDP": fred.get_series("GDPC1").pct_change(1).mul(100).iloc[1:] \
+                .interpolate(method="linear"),
+            "Unemployment Rate": fred.get_series("UNRATE").diff(1).iloc[1:] \
+                .interpolate(method="linear"),
+            "Nonfarm Payrolls": fred.get_series("PAYEMS").pct_change(1).mul(100).iloc[1:] \
+                .interpolate(method="linear"),
+            "Inflation": fred.get_series("CORESTICKM159SFRBATL").interpolate(method="linear")
+        } 
 
         return features
     
     def create_data(
         self,
         features_config: dict[str, int | None],
-        window=3
+        window: int = 3
     ) -> pd.DataFrame:
         """
-        Returns a DataFrame of a dataset made with the given specifications.
-        
-        Raises a ValueError if feature_config contains an unknown macroeconomic
-        variable or an impossible lag value or window is an impossible value.
+        Constructs a dataset with specified features and lags. Each row is labeled with a binary
+        target indicated if a recession occurs within the future window.
+
+        Args:
+            features_config: dict mapping feature names to number of lags
+            window: number of months into the future to check for a recession
+
+        Returns:
+            pd.DataFrame: Feature matrix with target labels indexed by months
+
+        Raises:
+            ValueError: If invalid feature names or lag values are provided
         """
-        # check for invalid inputs
-        for feature in features_config.keys():
-            lags = features_config[feature]
+        self._validate_data_config(features_config, window)
 
-            if feature not in self.all_features:
-                raise ValueError(f"featured_config contains unknown feature: {feature}")
-            elif lags is not None and lags <= 0:
-                raise ValueError(f"lag for {feature} in features_config is {lags}, but it must \
-                                   be postive")
-
-        # start date is the latest first recorded date of all selected features plus window
-        start_date = pd.Timestamp(max(
-            self.all_features[f].min() for f in self.all_features if f in features_config
-        )).normalize() + pd.DateOffset(months=window)
+        start_date = max(
+            self.all_features[feature].index[lags - 1] for feature, lags in features_config.items()
+        ) 
         target = self._get_target(start_date, window)
+        
+        end_date = min(target.index[-1], min(
+            self.all_features[feature].index.max() for feature in features_config.keys()
+        ))
+        target = target[target.index <= end_date]
 
         data = []
         
@@ -65,29 +70,49 @@ class RecessionDatasetBuilder:
 
             for feature, lags in features_config.items():
                 series = self.all_features[feature]
-                row.extend(list(series[series.index <= month][-lags:]))
+                values = series[series.index <= month].tail(lags)
+
+                row.extend(list(values))
 
             row.append(target[month])
-
             data.append(row)
 
-        # create column names
-        columns = []
-        for feature, lags in features_config.items():
-            for t in range(lags, 0, -1):
-                columns.append(f"{feature} (t-{t})")
-        columns.append(target.name)
+        column_names = [
+            f"{feature} (t-{lag})"
+            for feature, lags in features_config.items()
+            for lag in range(lags - 1, -1, -1)
+        ] + [target.name]
 
         return pd.DataFrame(
             data,
-            columns=columns,
+            columns=column_names,
             index=target.index
         )      
 
+    def _validate_data_config(self, features_config: dict[str, int | None], window: int):
+        """
+        Raises a ValueError if feature_config has invalid feature names or lag values or window
+        is not positve.
+        """
+        if window <= 0:
+            raise ValueError(f"Window must be a positive integer. Got {window}.")
+
+        for feature, lags in features_config.items():
+            if feature not in self.all_features:
+                raise ValueError(f"Unknown feature in config: {feature}")
+            if lags is not None:
+                if lags <= 0:
+                    raise ValueError(f"Lag for feature '{feature}' must be positive. Got {lags}.")
+                elif lags > len(self.all_features[feature]):
+                    raise ValueError(
+                        f"Lag for feature '{feature}' can be at most "
+                        f"{len(self.all_features[feature])}. Got {lags}"
+                    )
+            
+
     def _get_target(self, start_date: str | pd.Timestamp, window: int) -> pd.Series:
         """
-        Returns a Series indexed by months, starting at start_date and ending at current month
-        less the window size. Values are 1 when there is a recession within the window, and 0
+        Creates the target series: 1 if a recession starts within the next window months, 0
         otherwise.
         """
         recessions = get_recessions(start_date)
@@ -96,15 +121,14 @@ class RecessionDatasetBuilder:
         end_date = pd.Timestamp.today().normalize() - month_offset
         months = pd.date_range(start=start_date, end=end_date, freq="MS")
 
-        labels = []
+        def recession_in_window(start: pd.Timestamp) -> bool:
+            end = start + pd.DateOffset(months=window)
 
-        for start_month in months:
-            end_month = start_month + month_offset
-            rec_in_window = any(
-                (start_month <= recession_start) and (recession_start <= end_month)
+            return any(
+                (start <= recession_start) and (recession_start <= end)
                 for recession_start, _ in recessions
             )
 
-            labels.append(int(rec_in_window))
-
+        labels = [int(recession_in_window(month)) for month in months]
+        
         return pd.Series(labels, index=months, name=f"Recession")
