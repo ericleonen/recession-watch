@@ -31,6 +31,8 @@ class RecessionDatasetBuilder:
         Initializes and loads available macroeconomic features.
         """
         self.all_features = self._load_all_features()
+        self.start_date = None
+        self.end_date = None
 
     def _load_all_features(self) -> dict[str, pd.Series]:
         """
@@ -44,7 +46,7 @@ class RecessionDatasetBuilder:
                 .interpolate(method="linear"),
             "Nonfarm Payrolls": fred.get_series("PAYEMS").pct_change(1).mul(100).iloc[1:] \
                 .interpolate(method="linear"),
-            "Inflation": fred.get_series("CORESTICKM159SFRBATL").interpolate(method="linear")
+            "Inflation": fred.get_series("CORESTICKM159SFRBATL")[1:].interpolate(method="linear")
         } 
 
         return features
@@ -70,15 +72,15 @@ class RecessionDatasetBuilder:
         """
         self._validate_data_config(features_config, window)
 
-        start_date = max(
+        self.start_date = max(
             self.all_features[feature].index[lags - 1] for feature, lags in features_config.items()
         ) 
-        target = self._get_target(start_date, window)
+        target = self._get_target(self.start_date, window)
         
-        end_date = min(target.index[-1], min(
+        self.end_date = min(target.index[-1], min(
             self.all_features[feature].index.max() for feature in features_config.keys()
         ))
-        target = target[target.index <= end_date]
+        target = target[target.index <= self.end_date]
 
         data = []
         
