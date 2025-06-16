@@ -102,7 +102,15 @@ class RecessionDatasetBuilder:
             for lag in range(lags - 1, -1, -1)
         ] + [target.name]
 
+        current_data = []
+        for feature, lags in features_config.items():
+            current_data.extend(list(self.all_features[feature].tail(lags)))
+
         return pd.DataFrame(
+            [current_data],
+            columns=column_names[:-1],
+            index=[pd.Timestamp("today").floor("D").replace(day=1)]
+        ), pd.DataFrame(
             data,
             columns=column_names,
             index=target.index

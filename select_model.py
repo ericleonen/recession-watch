@@ -35,6 +35,11 @@ class ModelSelector:
         return pd.concat([
             self._eval_model(X, y, name) for name in self.trained_models.keys()
         ], axis=1)
+    
+    def select_model(self, X: pd.DataFrame, y: pd.Series, metric: str = "ROC AUC") -> str:
+        metrics = self.compare_models(X, y)
+
+        return metrics.columns[np.argmax(metrics.loc[metric, :])]
 
     def _tune_model(
             self,
