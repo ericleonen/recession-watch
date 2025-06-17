@@ -1,68 +1,58 @@
 import streamlit as st
-from data import RecessionDatasetBuilder, get_recessions
-from models import *
-from select_model import ModelSelector
-import pandas as pd
-import plotly.graph_objects as go
 
-st.write("# :red[Recession]Watch")
+st.markdown("# :red[Recession]Watch")
 
-dataset_builder = RecessionDatasetBuilder()
-
-selected_features = st.multiselect(
-    label="Features included in this model:",
-    options=dataset_builder.all_features.keys(),
-    default=["Real GDP", "Unemployment Rate"]
-)
-
-current_data, data = dataset_builder.create_data(features_config={
-    feature: 3 for feature in selected_features
-}, window=6)
-
-X = data.drop(columns=["Recession"])
-y = data["Recession"]
-
-with st.spinner("Training..."):
-    model_selector = ModelSelector([lin_reg, svm])
-    model_selector.fit(X, y)
-    best_model_name = model_selector.select_model(X, y, "Accuracy")
-    best_model, threshold = model_selector.trained_models[best_model_name]
-    current_proba = float(best_model.predict_proba(current_data)[:, 1])
-
-    st.write(f"## Prediction: {':red[Recession]' if current_proba >= threshold else ':green[No recession]'}")
-    st.write(f"Recession probability: {round(current_proba * 100, 2)}%")
-
-    proba = best_model.predict_proba(X)[:, 1] * 100
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=X.index, y=proba, mode="lines", name="recession proba"))
-    fig.update_layout(
-        xaxis_title="Date",
-        yaxis_title="Predicted Recession Probability (%)",
+with st.container():
+    results, explanations = st.columns(
+        [1, 3], 
+        border=True,
     )
 
-    recessions = get_recessions(start_date=dataset_builder.start_date)
-    for start, end in recessions:
-        fig.add_vrect(
-            x0=start,
-            x1=end,
-            fillcolor="red",
-            opacity=0.2,
-            layer="above",
-            line_width=0
+    with results:
+        st.metric(
+            label="U.S. Recession in 1 year",
+            value="23.82%",
+            delta="-5.32%",
+            delta_color="inverse"
         )
 
-    fig.add_shape(
-        type="line",
-        x0=X.index.min(), x1=X.index.max(),
-        y0=threshold*100, y1=threshold*100,
-        line=dict(
-            color="red",
-            width=2,
-            dash="dash"
-        ),
-        name="Threshold"
+    with explanations:
+        feature1, feature2, feature3 = st.columns([1, 1, 1])
+
+with st.expander(label="Model Settings & Analytics"):
+    st.markdown(
+        "**:red[Recession]Watch** works by training several models on a set of macroeconomic " \
+        "features from historical data to find a model that optimizes a metric. Use the inputs " \
+        "below to adjust the modelling process."
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    models = st.multiselect(
+        label="Models to try",
+        options=["Logistic Regression", "SVM", "XGBoost"],
+        default=["Logistic Regression", "SVM", "XGBoost"],
+        help="Each model is trained on the same training set. Metrics are computed with a 5-fold" \
+        "walk-forward optimization split."
+    )
+
+    features = st.multiselect(
+        label="Macroeconomic features",
+        options=["Real GDP", "Unemployment Rate"],
+        default=["Real GDP", "Unemployment Rate"],
+        help="Certain features are differenced when sensisble. All features are given 3 lags."
+    )
+
+    optimization_metric = st.selectbox(
+        label="Optimization metric",
+        options=["Average Precision", "Weighted Average Precision", "ROC AUC"]
+    )
+
+    st.empty()
+    
+    st.button(
+        label="Run & Predict"
+    )
+
+    st.divider()
+
+    st.markdown("We chose :red-badge[SVM] as the best model. We provide all metrics for all models below.")
 
