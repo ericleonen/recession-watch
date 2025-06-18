@@ -55,7 +55,7 @@ class RecessionDatasetBuilder:
         self,
         features_config: dict[str, int | None],
         window: int = 3
-    ) -> pd.DataFrame:
+    ) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
         """
         Constructs a dataset with specified features and lags. Each row is labeled with a binary
         target indicated if a recession occurs within the future window.
@@ -102,19 +102,21 @@ class RecessionDatasetBuilder:
             for lag in range(lags - 1, -1, -1)
         ] + [target.name]
 
+        data = pd.DataFrame(
+            data,
+            columns=column_names,
+            index=target.index
+        )
+
         current_data = []
         for feature, lags in features_config.items():
             current_data.extend(list(self.all_features[feature].tail(lags)))
 
-        return pd.DataFrame(
+        return data.drop(columns=["Recession"]), data["Recession"], pd.DataFrame(
             [current_data],
             columns=column_names[:-1],
             index=[pd.Timestamp("today").floor("D").replace(day=1)]
-        ), pd.DataFrame(
-            data,
-            columns=column_names,
-            index=target.index
-        )      
+        )     
 
     def _validate_data_config(self, features_config: dict[str, int | None], window: int):
         """
