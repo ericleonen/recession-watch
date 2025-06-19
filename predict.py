@@ -26,12 +26,11 @@ class RecessionPredictor:
 
         self._create_model_table(X, y, trained_models)
         best_model_name = self._select_model_name(metric)
-        best_pipeline, best_threshold = trained_models[best_model_name]
+        best_pipeline = trained_models[best_model_name]
 
         self.best_model = {
             "name": best_model_name,
-            "pipeline": best_pipeline,
-            "threshold": best_threshold
+            "pipeline": best_pipeline
         }
 
     def predict_proba(self, X: pd.DataFrame):
@@ -39,7 +38,7 @@ class RecessionPredictor:
 
     def _create_model_table(self, X: pd.DataFrame, y: pd.Series, trained_models: dict):
         self.model_table = pd.concat([
-            self._eval_model(X, y, name, pipeline, threshold) for name, (pipeline, threshold) in trained_models.items()
+            self._eval_model(X, y, name, pipeline) for name, pipeline in trained_models.items()
         ], axis=1)
     
     def _select_model_name(self, metric: str) -> str:
@@ -54,8 +53,8 @@ class RecessionPredictor:
     ) -> tuple[Pipeline, float]:
         """
         Tunes the given model, defined by a Pipeline and a tuneable parameter grid dict, to
-        maximize average precision under 5-fold walk-forward optimization with the given data. Then
-        finds the best threshold for optimizing F2 score. Returns a tuned model and its threshold.
+        maximize average precision under 5-fold walk-forward optimization with the given data.
+        Returns a tuned model.
         """
         tscv = TimeSeriesSplit(n_splits=5)
 
@@ -67,22 +66,14 @@ class RecessionPredictor:
         )
         search.fit(X, y)
 
-        best_model = search.best_estimator_
-        
-        probas = best_model.predict_proba(X)[:, 1]
-        thresholds = np.linspace(0, 1, 101)
-        f2_scores = [fbeta_score(y, probas >= t, beta=2) for t in thresholds]
-        best_threshold = thresholds[np.argmax(f2_scores)]
-
-        return best_model, best_threshold
+        return search.best_estimator_
 
     def _eval_model(
             self,
             X: pd.DataFrame, 
             y: pd.Series, 
             name: str,
-            pipeline: Pipeline,
-            threshold: float
+            pipeline: Pipeline
     ) -> pd.Series:
         """
         Evaluates the given tuned model and returning a Series of metrics: average precision,
@@ -112,7 +103,7 @@ class RecessionPredictor:
 
             pipeline.fit(X_train, y_train)
             probas = pipeline.predict_proba(X_test)[:, 1]
-            preds = probas >= threshold
+            preds = probas >= 0.5
 
             results["Average Precision"] += average_precision_score(y_test, probas)
             results["Weighted Average Precision"] += average_precision_score(

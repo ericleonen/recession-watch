@@ -75,16 +75,17 @@ class RecessionDatasetBuilder:
         self.start_date = max(
             self.all_features[feature].index[lags - 1] for feature, lags in features_config.items()
         ) 
-        target = self._get_target(self.start_date, window)
+        y_train = self._get_target(self.start_date, window)
         
-        self.end_date = min(target.index[-1], min(
+        self.end_date = min(y_train.index[-1], min(
             self.all_features[feature].index.max() for feature in features_config.keys()
         ))
-        target = target[target.index <= self.end_date]
+        y_train = y_train[y_train.index <= self.end_date]
 
-        data = []
+        X = []
+        dates = pd.date_range(start=self.start_date, end=pd.Timestamp.today(), freq="MS")
         
-        for month in target.index:
+        for month in dates:
             row = []
 
             for feature, lags in features_config.items():
@@ -93,30 +94,24 @@ class RecessionDatasetBuilder:
 
                 row.extend(list(values))
 
-            row.append(target[month])
-            data.append(row)
+            X.append(row)
 
         column_names = [
             f"{feature} (t-{lag})"
             for feature, lags in features_config.items()
             for lag in range(lags - 1, -1, -1)
-        ] + [target.name]
+        ]
 
-        data = pd.DataFrame(
-            data,
+        X = pd.DataFrame(
+            X,
             columns=column_names,
-            index=target.index
+            index=dates
         )
 
-        current_data = []
-        for feature, lags in features_config.items():
-            current_data.extend(list(self.all_features[feature].tail(lags)))
+        X_train = X[X.index <= self.end_date]
+        X_test = X[X.index > self.end_date]
 
-        return data.drop(columns=["Recession"]), data["Recession"], pd.DataFrame(
-            [current_data],
-            columns=column_names[:-1],
-            index=[pd.Timestamp("today").floor("D").replace(day=1)]
-        )     
+        return X_train, y_train, X_test  
 
     def _validate_data_config(self, features_config: dict[str, int | None], window: int):
         """
