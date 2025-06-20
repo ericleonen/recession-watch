@@ -83,15 +83,15 @@ class RecessionPredictor:
         pipeline = clone(pipeline)
         tscv = TimeSeriesSplit(n_splits=5)
         results = pd.Series(np.zeros(9), index=[
-            "Average Precision",
-            "Weighted Average Precision",
+            "Average precision",
+            "Weighted average precision",
             "ROC AUC",
             "Accuracy",
-            "Weighted Accuracy",
+            "Weighted accuracy",
             "Precision",
-            "Weighted Precision",
+            "Weighted precision",
             "Recall",
-            "Weighted Recall"
+            "Weighted recall"
         ], name=name)
 
         for train_index, test_index in tscv.split(X):
@@ -105,28 +105,28 @@ class RecessionPredictor:
             probas = pipeline.predict_proba(X_test)[:, 1]
             preds = probas >= 0.5
 
-            results["Average Precision"] += average_precision_score(y_test, probas)
-            results["Weighted Average Precision"] += average_precision_score(
+            results["Average precision"] += average_precision_score(y_test, probas)
+            results["Weighted average precision"] += average_precision_score(
                 y_test, 
                 probas, 
                 sample_weight=sample_weights_test
             )
             results["ROC AUC"] += roc_auc_score(y_test, probas)
             results["Accuracy"] += accuracy_score(y_test, preds)
-            results["Weighted Accuracy"] += accuracy_score(
+            results["Weighted accuracy"] += accuracy_score(
                 y_test, 
                 preds, 
                 sample_weight=sample_weights_test
             )
             results["Precision"] += precision_score(y_test, preds, zero_division=0)
-            results["Weighted Precision"] += precision_score(
+            results["Weighted precision"] += precision_score(
                 y_test, 
                 preds, 
                 sample_weight=sample_weights_test,
                 zero_division=0
             )
             results["Recall"] += recall_score(y_test, preds)
-            results["Weighted Recall"] += recall_score(
+            results["Weighted recall"] += recall_score(
                 y_test, 
                 preds, 
                 sample_weight=sample_weights_test

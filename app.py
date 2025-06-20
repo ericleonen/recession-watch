@@ -2,10 +2,11 @@ import streamlit as st
 from data import RecessionDatasetBuilder
 from models import models
 from predict import RecessionPredictor
-from helpers import format_months, format_proba, proba_to_phrase
+from helpers import format_months, format_proba, format_pred_phrase
 import altair as alt
 import numpy as np
 import pandas as pd
+from explain import get_top_features
 
 dataset_builder = RecessionDatasetBuilder()
 
@@ -21,15 +22,6 @@ with st.container():
 
 with st.container():
     feature1, feature2, feature3 = st.columns([1, 1, 1], border=True)
-
-    with feature1:
-        "FEATURE 1"
-    
-    with feature2:
-        "FEATURE 2"
-
-    with feature3:
-        "FEATURE 3"
 
 model_config = st.expander(label="Model Settings & Analytics")
 
@@ -50,7 +42,7 @@ with model_config:
     selected_models = st.multiselect(
         label="Models to try",
         options=models.keys(),
-        default=["Logistic Regression"],
+        default=["Logistic regression", "SVM"],
         help="Each model is trained on the same training set. Metrics are computed with a 5-fold" \
              "walk-forward optimization split."
     )
@@ -58,22 +50,28 @@ with model_config:
     features = st.multiselect(
         label="Macroeconomic features",
         options=dataset_builder.all_features.keys(),
-        default=["Real GDP", "Unemployment Rate"],
+        default=["Real GDP growth", "Unemployment rate change", "Inflation"],
         help="Certain features are differenced when sensisble. All features are given 2 lags."
+    )
+
+    lags = st.select_slider(
+        label="Feature lags",
+        options=range(1, 13),
+        value=3
     )
 
     optimization_metric = st.selectbox(
         label="Optimization metric",
         options=[
-            "Average Precision",
-            "Weighted Average Precision",
+            "Average precision",
+            "Weighted average precision",
             "ROC AUC",
             "Accuracy",
-            "Weighted Accuracy",
+            "Weighted accuracy",
             "Precision",
-            "Weighted Precision",
+            "Weighted precision",
             "Recall",
-            "Weighted Recall"
+            "Weighted recall"
         ]
     )
 
@@ -84,7 +82,7 @@ with model_config:
 with prediction:
     with st.spinner("Thinking..."):
         X_train, y_train, X_test = dataset_builder.create_data({
-            feature: 2 for feature in features
+            feature: lags for feature in features
         }, window=window)
 
         predictor = RecessionPredictor(selected_models=selected_models)
@@ -93,29 +91,29 @@ with prediction:
         probas_test = predictor.predict_proba(X_test)
 
         st.metric(
-            label=f"US Recession in {format_months(window)}",
+            label=f"Recession in {format_months(window)}",
             value=format_proba(float(probas_test.iloc[-1]))
         )
-
-        st.markdown(f"A recession is **{proba_to_phrase(probas_test.iloc[-1])}** due to " \
-                     "{}, {}, and {}")
 
 with trend:
     with st.spinner("Thinking..."):
         probas_df = np.round(probas_test, 3).reset_index()
         probas_df.columns = ["Date", f"Probability"]
 
+        proba_x_axis = alt.X("Date:T", axis=alt.Axis(title=""))
+        proba_y_axis = alt.Y(f"{probas_df.columns[1]}:Q", axis=alt.Axis(title=""))
+
         proba_area_chart = alt.Chart(probas_df).mark_area(opacity=0.4, color="red").encode(
-            x="Date:T",
-            y=f"{probas_df.columns[1]}:Q"
+            x=proba_x_axis,
+            y=proba_y_axis
         ).properties(
-            height=300,
+            height=250,
             title=f"Probability of U.S. Recession within {format_months(window)}",
         )
 
         proba_line_chart = alt.Chart(probas_df).mark_line(opacity=0.8, color="red").encode(
-            x="Date:T",
-            y=f"{probas_df.columns[1]}:Q"
+            x=proba_x_axis,
+            y=proba_y_axis
         )
 
         st.altair_chart(proba_area_chart + proba_line_chart, use_container_width=True)
@@ -136,3 +134,28 @@ with model_config:
     ]
 
     st.write(metrics_table)
+
+top_features = get_top_features(predictor, X_train, X_test.tail(1), features, lags, int(probas_test.iloc[-1]))
+
+with prediction:
+    st.markdown(format_pred_phrase(probas_test.iloc[-1], top_features))
+
+top_feature_x_axis = alt.X("Date:T", axis=alt.Axis(title=""))
+
+for i, feature_container in enumerate([feature1, feature2, feature3]):
+    with feature_container:
+        feature_series = dataset_builder.all_features[top_features[i]].tail(lags)
+        feature_df = feature_series.reset_index()
+        feature_df.columns = ["Date", "Value"]
+        feature_area_chart = alt.Chart(feature_df).mark_area(opacity=0.4, color="blue").encode(
+            x=top_feature_x_axis,
+            y=alt.Y("Value:Q", axis=alt.Axis(title=""))
+        ).properties(
+            height=200,
+            title=top_features[i]
+        )
+        feature_line_chart = alt.Chart(feature_df).mark_line(opacity=0.8, color="blue").encode(
+            x=top_feature_x_axis,
+            y=alt.Y("Value:Q", axis=alt.Axis(title=""))
+        )
+        st.altair_chart(feature_area_chart + feature_line_chart, use_container_width=True)

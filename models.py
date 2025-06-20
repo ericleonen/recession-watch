@@ -4,7 +4,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 
 models = {
-    "Logistic Regression": (
+    "Logistic regression": (
         make_pipeline(
             StandardScaler(),
             LogisticRegression(

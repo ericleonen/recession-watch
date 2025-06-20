@@ -40,11 +40,11 @@ class RecessionDatasetBuilder:
         monthly or quarterly. Gaps are imputed with linear interpolation.
         """
         features = {
-            "Real GDP": fred.get_series("GDPC1").pct_change(1).mul(100).iloc[1:] \
+            "Real GDP growth": fred.get_series("GDPC1").pct_change(1).mul(100).iloc[1:] \
                 .interpolate(method="linear"),
-            "Unemployment Rate": fred.get_series("UNRATE").diff(1).iloc[1:] \
+            "Unemployment rate change": fred.get_series("UNRATE").diff(1).iloc[1:] \
                 .interpolate(method="linear"),
-            "Nonfarm Payrolls": fred.get_series("PAYEMS").pct_change(1).mul(100).iloc[1:] \
+            "Nonfarm payrolls growth": fred.get_series("PAYEMS").pct_change(1).mul(100).iloc[1:] \
                 .interpolate(method="linear"),
             "Inflation": fred.get_series("CORESTICKM159SFRBATL")[1:].interpolate(method="linear")
         } 
