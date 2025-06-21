@@ -1,14 +1,13 @@
 import streamlit as st
-from data import RecessionDatasetBuilder
+from data import create_dataset_builder
 from models import models
 from predict import RecessionPredictor
 from helpers import format_months, format_proba, format_pred_phrase
 import altair as alt
 import numpy as np
-import pandas as pd
 from explain import get_top_features
 
-dataset_builder = RecessionDatasetBuilder()
+dataset_builder = create_dataset_builder()
 
 # --- STATIC ---
 
@@ -81,9 +80,7 @@ with model_config:
 
 with prediction:
     with st.spinner("Thinking..."):
-        X_train, y_train, X_test = dataset_builder.create_data({
-            feature: lags for feature in features
-        }, window=window)
+        X_train, y_train, X_test = dataset_builder.build(features, lags, window)
 
         predictor = RecessionPredictor(selected_models=selected_models)
         predictor.fit(X_train, y_train)
