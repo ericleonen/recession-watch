@@ -49,8 +49,7 @@ with model_config:
     features = st.multiselect(
         label="Macroeconomic features",
         options=dataset_builder.all_features.keys(),
-        default=["Real GDP growth", "Unemployment rate change", "Inflation"],
-        help="Certain features are differenced when sensisble. All features are given 2 lags."
+        default=["Real GDP growth", "Unemployment rate change", "Inflation"]
     )
 
     lags = st.select_slider(
@@ -81,8 +80,7 @@ with model_config:
 with prediction:
     with st.spinner("Thinking..."):
         X_train, y_train, X_test = dataset_builder.build(features, lags, window)
-
-        predictor = RecessionPredictor(selected_models=selected_models)
+        predictor = RecessionPredictor(selected_models)
         predictor.fit(X_train, y_train)
 
         probas_test = predictor.predict_proba(X_test)

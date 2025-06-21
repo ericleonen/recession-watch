@@ -1,13 +1,13 @@
 import pandas as pd
 
+def base_preprocessing(series: pd.Series) -> pd.Series:
+    return series.dropna().interpolate(method="linear")
+
 def growth_preprocessing(series: pd.Series) -> pd.Series:
-    return series.pct_change(1).mul(100).iloc[1:].interpolate(method="linear")
+    return base_preprocessing(series.pct_change(1).mul(100))
 
 def diff_preprocessing(series: pd.Series) -> pd.Series:
-    return series.diff(1).iloc[1:].interpolate(method="linear")
-
-def no_preprocessing(series: pd.Series) -> pd.Series:
-    return series.interpolate(method="linear")
+    return base_preprocessing(series.diff(1))
 
 FEATURES = {
     "Real GDP growth": {
@@ -28,6 +28,6 @@ FEATURES = {
     "Inflation": {
         "fred_series": "CORESTICKM159SFRBATL",
         "description": "",
-        "preprocessing": no_preprocessing
+        "preprocessing": base_preprocessing
     }
 }

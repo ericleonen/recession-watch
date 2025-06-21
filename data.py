@@ -1,7 +1,7 @@
 from fred_client import fred
 import pandas as pd
 import numpy as np
-from features import FEATURES
+from features_config import FEATURES
 import streamlit as st
 
 def get_recessions(start_date: str | pd.Timestamp) -> np.ndarray:
