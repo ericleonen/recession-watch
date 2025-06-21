@@ -12,22 +12,22 @@ def diff_preprocessing(series: pd.Series) -> pd.Series:
 FEATURES = {
     "Real GDP growth": {
         "fred_series": "GDPC1",
-        "description": "",
+        "description": "Quarterly percent change in real gross domestic product",
         "preprocessing": growth_preprocessing
     },
     "Unemployment rate change": {
         "fred_series": "UNRATE",
-        "description": "",
+        "description": "Monthly difference in unemployment rate (U3)",
         "preprocessing": diff_preprocessing
     },
     "Nonfarm payrolls growth": {
         "fred_series": "PAYEMS",
-        "description": "",
+        "description": "Monthly percent change in number of nonfarm workers",
         "preprocessing": growth_preprocessing
     },
     "Inflation": {
         "fred_series": "CORESTICKM159SFRBATL",
-        "description": "",
+        "description": "Yearly percent change in Sticky Consumer Price Index (less food and energy)",
         "preprocessing": base_preprocessing
     }
 }

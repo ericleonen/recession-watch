@@ -19,5 +19,8 @@ def proba_to_phrase(proba: float):
     
 def format_pred_phrase(proba: float, top_features: list[str]):
     top_features = [feature[0].lower() + feature[1:] for feature in top_features]
-    features_phrase = ", ".join(top_features[:-1]) + f", and {top_features[-1]}"
-    return f"A recession is {proba_to_phrase(proba)} due to trends in {features_phrase}."
+    if len(top_features) == 1:
+        features_phrase = top_features[0]
+    else:
+        features_phrase = ", ".join(top_features[:-1]) + f", and {top_features[-1]}"
+    return f"A recession is **{proba_to_phrase(proba)}** due to trends in {features_phrase}."

@@ -6,6 +6,7 @@ from helpers import format_months, format_proba, format_pred_phrase
 import altair as alt
 import numpy as np
 from explain import get_top_features
+from features_config import FEATURES
 
 dataset_builder = create_dataset_builder()
 
@@ -139,7 +140,7 @@ top_feature_x_axis = alt.X("Date:T", axis=alt.Axis(title=""))
 
 for i, feature_container in enumerate([feature1, feature2, feature3]):
     with feature_container:
-        feature_series = dataset_builder.all_features[top_features[i]].tail(lags)
+        feature_series = dataset_builder.all_features[top_features[i]].tail(len(X_test) + lags - 1)
         feature_df = feature_series.reset_index()
         feature_df.columns = ["Date", "Value"]
         feature_area_chart = alt.Chart(feature_df).mark_area(opacity=0.4, color="blue").encode(
@@ -154,3 +155,6 @@ for i, feature_container in enumerate([feature1, feature2, feature3]):
             y=alt.Y("Value:Q", axis=alt.Axis(title=""))
         )
         st.altair_chart(feature_area_chart + feature_line_chart, use_container_width=True)
+        
+        feature_description = FEATURES[top_features[i]]["description"]
+        st.markdown(f":gray[{feature_description}]")
