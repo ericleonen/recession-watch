@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.utils import compute_sample_weight
 from sklearn import clone
 from sklearn.metrics import average_precision_score, roc_auc_score, fbeta_score, accuracy_score, precision_score, recall_score
-from models import models
+from models import MODELS
 
 METRICS = [
     "Average precision",
@@ -32,7 +32,7 @@ class RecessionPredictor:
 
     def fit(self, X: pd.DataFrame, y: pd.Series, metric: str = "ROC AUC"):
         trained_models = {
-            model_name: self._tune_train_model(X, y, models[model_name][0], models[model_name][1])
+            model_name: self._tune_train_model(X, y, MODELS[model_name][0], MODELS[model_name][1])
             for model_name in self.selected_models
         }
 

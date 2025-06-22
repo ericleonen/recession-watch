@@ -3,10 +3,10 @@ from data import create_dataset_builder
 from models import MODELS
 from predict import RecessionPredictor, METRICS
 from helpers import format_months, format_proba, format_pred_phrase
-import altair as alt
 import numpy as np
 from explain import get_top_features
 from features_config import FEATURES
+from charts import series_chart
 
 dataset_builder = create_dataset_builder()
 
@@ -83,26 +83,13 @@ with prediction:
 
 with trend:
     with st.spinner("Thinking..."):
-        probas_df = np.round(probas_test, 3).reset_index()
-        probas_df.columns = ["Date", f"Probability"]
-
-        proba_x_axis = alt.X("Date:T", axis=alt.Axis(title=""))
-        proba_y_axis = alt.Y(f"{probas_df.columns[1]}:Q", axis=alt.Axis(title=""))
-
-        proba_area_chart = alt.Chart(probas_df).mark_area(opacity=0.4, color="red").encode(
-            x=proba_x_axis,
-            y=proba_y_axis
-        ).properties(
+        series_chart(
+            series=np.round(probas_test, 3),
+            name="Probability",
+            color="red",
             height=250,
-            title=f"Probability of U.S. Recession within {format_months(window)}",
+            title=f"Probability of U.S. Recession within {format_months(window)}"
         )
-
-        proba_line_chart = alt.Chart(probas_df).mark_line(opacity=0.8, color="red").encode(
-            x=proba_x_axis,
-            y=proba_y_axis
-        )
-
-        st.altair_chart(proba_area_chart + proba_line_chart, use_container_width=True)
 
 with model_config:
     best_model_name = predictor.best_model["name"]
@@ -126,25 +113,16 @@ top_features = get_top_features(predictor, X_train, X_test.tail(1), features, la
 with prediction:
     st.markdown(format_pred_phrase(probas_test.iloc[-1], top_features))
 
-top_feature_x_axis = alt.X("Date:T", axis=alt.Axis(title=""))
-
 for i, feature_container in enumerate([feature1, feature2, feature3]):
     with feature_container:
-        feature_series = dataset_builder.all_features[top_features[i]].tail(len(X_test) + lags - 1)
-        feature_df = feature_series.reset_index()
-        feature_df.columns = ["Date", "Value"]
-        feature_area_chart = alt.Chart(feature_df).mark_area(opacity=0.4, color="blue").encode(
-            x=top_feature_x_axis,
-            y=alt.Y("Value:Q", axis=alt.Axis(title=""))
-        ).properties(
+        top_feature = top_features[i]
+        series_chart(
+            series=dataset_builder.all_features[top_feature].tail(len(X_test) + lags - 1),
+            name=top_feature,
+            color="blue",
             height=200,
-            title=top_features[i]
+            title=top_feature
         )
-        feature_line_chart = alt.Chart(feature_df).mark_line(opacity=0.8, color="blue").encode(
-            x=top_feature_x_axis,
-            y=alt.Y("Value:Q", axis=alt.Axis(title=""))
-        )
-        st.altair_chart(feature_area_chart + feature_line_chart, use_container_width=True)
-        
-        feature_description = FEATURES[top_features[i]]["description"]
+
+        feature_description = FEATURES[top_feature]["description"]
         st.markdown(f":gray[{feature_description}]")
