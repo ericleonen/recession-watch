@@ -9,6 +9,10 @@ def series_chart(
     height: float,
     title: str
 ):
+    """
+    Plots an Altair chart of the given series with the given series name, color, chart
+    height and title.
+    """
     df = series.reset_index()
     df.columns = ["Date", name]
 
