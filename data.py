@@ -46,19 +46,9 @@ class RecessionDatasetBuilder:
         window: int = 3
     ) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
         """
-        Constructs training (X_train, y_train) and testing (X_test) sets with specified features
-        and lags. Sets start_date to the latest date where a feature was first recorded. Sets
-        end_date to the earliest date where a feature was last recorded.
-
-        Args:
-            selected_features: features to include in the dataset
-            lags: number of lags used per feature
-            window: number of months into the future to check for a recession
-
-        Returns:
-            X_train: DataFrame of features and lags from start_date to end_date
-            y_train: Series where 1 indicates a recession happening within the window, 0 otherwise
-            X_test: DataFrame of features and lags past end_date
+        Constructs training (X_train, y_train) and testing (X_test) sets with specified features,
+        lags, and forecase window. Sets start_date to the latest date where a feature was first
+        recorded. Sets end_date to the earliest date where a feature was last recorded.
         """
         self.start_date = max(
             self.all_features[feature].index[lags - 1] for feature in features

@@ -9,6 +9,12 @@ def get_top_features(
     lags: int,
     pred: int
 ) -> list[str]:
+    """
+    Returns a list of the top three (at most) influential features in the latest prediction from
+    the given predictor. The baseline is calculated from X_test, features defines the possible
+    features, lags is the number of lags per feature, and pred (1 or 0) was whether the latest
+    prediction was a recession forecast or not respectively.
+    """
     X_recent = X_test.tail(1)
     X_test = X_test.iloc[:-1]
 

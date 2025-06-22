@@ -30,7 +30,11 @@ class RecessionPredictor:
         """
         self.selected_models = selected_models
 
-    def fit(self, X: pd.DataFrame, y: pd.Series, metric: str = "ROC AUC"):
+    def fit(self, X: pd.DataFrame, y: pd.Series, metric: str = "ROC AUC") -> dict:
+        """
+        Trains all potential models on X and y, tunes them, and chooses the best model according to
+        the given metric.
+        """
         trained_models = {
             model_name: self._tune_train_model(X, y, model_name)
             for model_name in self.selected_models
@@ -45,15 +49,24 @@ class RecessionPredictor:
             "pipeline": best_pipeline
         }
 
-    def predict_proba(self, X: pd.DataFrame):
+    def predict_proba(self, X: pd.DataFrame) -> pd.Series:
+        """
+        Returns the probability of a recession given X.
+        """
         return pd.Series(self.best_model["pipeline"].predict_proba(X)[:, 1], index=X.index)
 
     def _create_model_table(self, X: pd.DataFrame, y: pd.Series, trained_models: dict):
+        """
+        Computes the model comparison table and saves it as model_table.
+        """
         self.model_table = pd.concat([
             self._eval_model(X, y, model_name, pipeline) for model_name, pipeline in trained_models.items()
         ], axis=1)
     
     def _select_model_name(self, metric: str) -> str:
+        """
+        Selects the best model accoridng to the given metric, reading off the model_table.
+        """
         return self.model_table.columns[np.argmax(self.model_table.loc[metric, :])]
 
     def _tune_train_model(

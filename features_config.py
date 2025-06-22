@@ -1,12 +1,21 @@
 import pandas as pd
 
 def base_preprocessing(series: pd.Series) -> pd.Series:
+    """
+    Returns the given series where missing values have been interpolated linearly.
+    """
     return series.dropna().interpolate(method="linear")
 
 def growth_preprocessing(series: pd.Series) -> pd.Series:
+    """
+    Returns the given series with base preprocessing as percent changes.
+    """
     return base_preprocessing(series.pct_change(1).mul(100))
 
 def diff_preprocessing(series: pd.Series) -> pd.Series:
+    """
+    Returns the given series with base preprocessing as differences.
+    """
     return base_preprocessing(series.diff(1))
 
 FEATURES = {
