@@ -12,6 +12,12 @@ dataset_builder = create_dataset_builder()
 
 # --- STATIC ---
 
+st.set_page_config(
+    page_title="RecessionWatch",
+    page_icon="🚨",
+    layout="wide"
+)
+
 st.markdown("# 🤬 :red[Recession]Watch")
 
 with st.container():
@@ -94,7 +100,13 @@ with trend:
 
 with prediction:
     with st.spinner("Explaining..."):
-        top_features = get_top_features(predictor, X_test, features, lags, int(probas_test.iloc[-1]))
+        top_features = get_top_features(
+            predictor, 
+            X_test, 
+            features, 
+            lags, 
+            int(probas_test.iloc[-1])
+        )
 
         st.markdown(format_pred_phrase(probas_test.iloc[-1], top_features))
 
