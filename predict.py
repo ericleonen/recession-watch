@@ -4,8 +4,20 @@ import pandas as pd
 import numpy as np
 from sklearn.utils import compute_sample_weight
 from sklearn import clone
-from sklearn.metrics import fbeta_score, average_precision_score, roc_auc_score, fbeta_score, accuracy_score, precision_score, recall_score
+from sklearn.metrics import average_precision_score, roc_auc_score, fbeta_score, accuracy_score, precision_score, recall_score
 from models import models
+
+METRICS = [
+    "Average precision",
+    "Weighted average precision",
+    "ROC AUC",
+    "Accuracy",
+    "Weighted accuracy",
+    "Precision",
+    "Weighted precision",
+    "Recall",
+    "Weighted recall"
+]
 
 class RecessionPredictor:
     """
@@ -82,17 +94,7 @@ class RecessionPredictor:
         """
         pipeline = clone(pipeline)
         tscv = TimeSeriesSplit(n_splits=5)
-        results = pd.Series(np.zeros(9), index=[
-            "Average precision",
-            "Weighted average precision",
-            "ROC AUC",
-            "Accuracy",
-            "Weighted accuracy",
-            "Precision",
-            "Weighted precision",
-            "Recall",
-            "Weighted recall"
-        ], name=name)
+        results = pd.Series(np.zeros(9), index=METRICS, name=name)
 
         for train_index, test_index in tscv.split(X):
             X_train = X.iloc[train_index]

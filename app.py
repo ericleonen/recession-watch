@@ -1,7 +1,7 @@
 import streamlit as st
 from data import create_dataset_builder
 from models import MODELS
-from predict import RecessionPredictor
+from predict import RecessionPredictor, METRICS
 from helpers import format_months, format_proba, format_pred_phrase
 import altair as alt
 import numpy as np
@@ -61,17 +61,7 @@ with model_config:
 
     optimization_metric = st.selectbox(
         label="Optimization metric",
-        options=[
-            "Average precision",
-            "Weighted average precision",
-            "ROC AUC",
-            "Accuracy",
-            "Weighted accuracy",
-            "Precision",
-            "Weighted precision",
-            "Recall",
-            "Weighted recall"
-        ]
+        options=METRICS
     )
 
     st.divider()
