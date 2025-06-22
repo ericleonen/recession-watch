@@ -12,7 +12,7 @@ dataset_builder = create_dataset_builder()
 
 # --- STATIC ---
 
-st.markdown("# :red[Recession]Watch")
+st.markdown("# 🤬 :red[Recession]Watch")
 
 with st.container():
     prediction, trend = st.columns(
@@ -49,8 +49,8 @@ with model_config:
 
     features = st.multiselect(
         label="Macroeconomic features",
-        options=dataset_builder.all_features.keys(),
-        default=["Real GDP growth", "Unemployment rate change", "Inflation"]
+        options=FEATURES.keys(),
+        default=FEATURES.keys()
     )
 
     lags = st.select_slider(
@@ -66,13 +66,15 @@ with model_config:
 
     st.divider()
 
+st.markdown("😨 A pessimistic tool built by [Eric Leonen](https://github.com/ericleonen)")
+
 # --- DYNAMIC ---
 
 with prediction:
     with st.spinner("Predicting..."):
         X_train, y_train, X_test = dataset_builder.build(features, lags, window)
         predictor = RecessionPredictor(selected_models)
-        predictor.fit(X_train, y_train)
+        predictor.fit(X_train, y_train, optimization_metric)
 
         probas_test = predictor.predict_proba(X_test)
 
