@@ -3,14 +3,16 @@ from predict import RecessionPredictor
 import pandas as pd
 
 def get_top_features(
-        predictor: RecessionPredictor, 
-        X_train: pd.DataFrame,
-        X_recent: pd.DataFrame,
-        features: list[str],
-        lags: int,
-        pred: int
+    predictor: RecessionPredictor, 
+    X_test: pd.DataFrame,
+    features: list[str],
+    lags: int,
+    pred: int
 ) -> list[str]:
-    explainer = shap.Explainer(predictor.predict_proba, X_train)
+    X_recent = X_test.tail(1)
+    X_test = X_test.iloc[:-1]
+
+    explainer = shap.Explainer(predictor.predict_proba, X_test)
     shap_values = explainer(X_recent)
 
     feature_shaps = pd.Series(

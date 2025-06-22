@@ -1,10 +1,10 @@
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
+from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 from sklearn.pipeline import Pipeline
 import pandas as pd
 import numpy as np
 from sklearn.utils import compute_sample_weight
 from sklearn import clone
-from sklearn.metrics import average_precision_score, roc_auc_score, fbeta_score, accuracy_score, precision_score, recall_score
+from sklearn.metrics import average_precision_score, roc_auc_score, accuracy_score, precision_score, recall_score
 from models import MODELS
 
 METRICS = [
@@ -32,7 +32,7 @@ class RecessionPredictor:
 
     def fit(self, X: pd.DataFrame, y: pd.Series, metric: str = "ROC AUC"):
         trained_models = {
-            model_name: self._tune_train_model(X, y, MODELS[model_name][0], MODELS[model_name][1])
+            model_name: self._tune_train_model(X, y, model_name)
             for model_name in self.selected_models
         }
 
@@ -50,7 +50,7 @@ class RecessionPredictor:
 
     def _create_model_table(self, X: pd.DataFrame, y: pd.Series, trained_models: dict):
         self.model_table = pd.concat([
-            self._eval_model(X, y, name, pipeline) for name, pipeline in trained_models.items()
+            self._eval_model(X, y, model_name, pipeline) for model_name, pipeline in trained_models.items()
         ], axis=1)
     
     def _select_model_name(self, metric: str) -> str:
@@ -60,23 +60,33 @@ class RecessionPredictor:
             self,
             X: pd.DataFrame, 
             y: pd.Series, 
-            pipeline: Pipeline, 
-            param_grid: dict
+            model_name: str
     ) -> tuple[Pipeline, float]:
         """
         Tunes the given model, defined by a Pipeline and a tuneable parameter grid dict, to
-        maximize average precision under 5-fold walk-forward optimization with the given data.
+        maximize average precision under 3-fold walk-forward optimization with the given data.
         Returns a tuned model.
         """
-        tscv = TimeSeriesSplit(n_splits=5)
+        tscv = TimeSeriesSplit(n_splits=3)
+        model = MODELS[model_name]
 
-        search = GridSearchCV(
-            pipeline,
-            param_grid=param_grid,
+        search = RandomizedSearchCV(
+            model["pipeline"],
+            param_distributions={
+                f"classifier__{key}": value 
+                for key, value in model["parameter_grid"].items()
+            },
             scoring="average_precision",
-            cv=tscv
+            cv=tscv,
+            n_iter=5,
+            random_state=42
         )
-        search.fit(X, y)
+
+        if "needs_sample_weights" in model:
+            sample_weights = compute_sample_weight(class_weight="balanced", y=y)
+            search.fit(X, y, classifier__sample_weight=sample_weights)
+        else:
+            search.fit(X, y)
 
         return search.best_estimator_
 
@@ -84,7 +94,7 @@ class RecessionPredictor:
             self,
             X: pd.DataFrame, 
             y: pd.Series, 
-            name: str,
+            model_name: str,
             pipeline: Pipeline
     ) -> pd.Series:
         """
@@ -92,9 +102,10 @@ class RecessionPredictor:
         weighted average precision, ROC AUC, accuracy, weighted accuracy, precision, weighted
         precision, recall, and weighted recall.
         """
+        tscv = TimeSeriesSplit(n_splits=3)
+        results = pd.Series(np.zeros(9), index=METRICS, name=model_name)
+        model = MODELS[model_name]
         pipeline = clone(pipeline)
-        tscv = TimeSeriesSplit(n_splits=5)
-        results = pd.Series(np.zeros(9), index=METRICS, name=name)
 
         for train_index, test_index in tscv.split(X):
             X_train = X.iloc[train_index]
@@ -103,7 +114,12 @@ class RecessionPredictor:
             y_test = y.iloc[test_index]
             sample_weights_test = compute_sample_weight(class_weight="balanced", y=y_test)
 
-            pipeline.fit(X_train, y_train)
+            if "needs_sample_weights" in model:
+                sample_weights_train = compute_sample_weight(class_weight="balanced", y=y_train)
+                pipeline.fit(X_train, y_train, classifier__sample_weight=sample_weights_train)
+            else:
+                pipeline.fit(X_train, y_train)
+
             probas = pipeline.predict_proba(X_test)[:, 1]
             preds = probas >= 0.5
 

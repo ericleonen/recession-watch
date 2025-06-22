@@ -43,7 +43,7 @@ with model_config:
         label="Models to try",
         options=MODELS.keys(),
         default=MODELS.keys(),
-        help="Each model is trained on the same training set. Metrics are computed with a 5-fold" \
+        help="Each model is trained on the same training set. Metrics are computed with a 3-fold" \
              "walk-forward optimization split."
     )
 
@@ -69,7 +69,7 @@ with model_config:
 # --- DYNAMIC ---
 
 with prediction:
-    with st.spinner("Thinking..."):
+    with st.spinner("Predicting..."):
         X_train, y_train, X_test = dataset_builder.build(features, lags, window)
         predictor = RecessionPredictor(selected_models)
         predictor.fit(X_train, y_train)
@@ -82,36 +82,19 @@ with prediction:
         )
 
 with trend:
-    with st.spinner("Thinking..."):
-        series_chart(
-            series=np.round(probas_test, 3),
-            name="Probability",
-            color="red",
-            height=250,
-            title=f"Probability of U.S. Recession within {format_months(window)}"
-        )
-
-with model_config:
-    best_model_name = predictor.best_model["name"]
-    st.markdown(f"We chose **{best_model_name}** as the best model. We provide all metrics, "
-                 "measured with 5-fold walk-forward validation, for all models below.")
-
-    metrics_table = predictor.model_table.copy()
-    metrics_table.index = [
-        f"⭐ {optimization_metric}" if metric == optimization_metric else metric
-        for metric in metrics_table.index
-    ]
-    metrics_table.columns = [
-        f"⭐ {best_model_name}" if name == best_model_name else name
-        for name in metrics_table.columns
-    ]
-
-    st.write(metrics_table)
-
-top_features = get_top_features(predictor, X_train, X_test.tail(1), features, lags, int(probas_test.iloc[-1]))
+    series_chart(
+        series=np.round(probas_test, 3),
+        name="Probability",
+        color="red",
+        height=250,
+        title=f"Probability of U.S. Recession within {format_months(window)}"
+    )
 
 with prediction:
-    st.markdown(format_pred_phrase(probas_test.iloc[-1], top_features))
+    with st.spinner("Explaining..."):
+        top_features = get_top_features(predictor, X_test, features, lags, int(probas_test.iloc[-1]))
+
+        st.markdown(format_pred_phrase(probas_test.iloc[-1], top_features))
 
 for i, feature_container in enumerate([feature1, feature2, feature3]):
     with feature_container:
@@ -126,3 +109,20 @@ for i, feature_container in enumerate([feature1, feature2, feature3]):
 
         feature_description = FEATURES[top_feature]["description"]
         st.markdown(f":gray[{feature_description}]")
+
+with model_config:
+    best_model_name = predictor.best_model["name"]
+    st.markdown(f"We chose **{best_model_name}** as the best model. We provide all metrics, "
+                 "measured with 3-fold walk-forward validation, for all models below.")
+
+    metrics_table = predictor.model_table.copy()
+    metrics_table.index = [
+        f"⭐ {optimization_metric}" if metric == optimization_metric else metric
+        for metric in metrics_table.index
+    ]
+    metrics_table.columns = [
+        f"⭐ {best_model_name}" if name == best_model_name else name
+        for name in metrics_table.columns
+    ]
+
+    st.write(metrics_table)
