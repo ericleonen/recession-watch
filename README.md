@@ -1,19 +1,21 @@
 # RecessionWatch
 
-**RecessionWatch** is a web-based application that tracks and visualizes the probability of a U.S. recession occurring in the next 3 months, 6 months, or 1 year. It uses real-time macroeconomic indicators to power a machine learning model trained on historical data.
+**RecessionWatch** is a web-based application that tracks and visualizes the probability of a U.S. recession. It uses real-time macroeconomic indicators, an automated model selection pipeline, and SHAP to create a summary of a recession prediction and the key features that drove that prediction.
 
 Built with **Streamlit**, this app aims to make macroeconomic forecasting accessible to researchers, policymakers, investors, and the general public.
 
 ---
 
-## 🔍 Features
+## Features
 
-- Predicts U.S. recession probabilities at 3, 6, and 12-month horizons
-- Uses live or recent macroeconomic indicators such as:
-  - Yield curve spreads
-  - Unemployment rate
-  - Inflation (CPI)
-  - Industrial production
-  - Leading indicators
-- Interactive visualizations and dashboards
-- Transparent model assumptions and performance metrics
+- Lots of customization. Under `Model Settings & Analytics`, choose:
+  - The forecast window timeframe
+  - Which ML models to try
+  - Which macroeconomic features to use
+  - How many lags per feature
+  - Which metric to optimize for
+
+- Comprehensive summary
+  - Current probability of recession given latest FRED data
+  - Trends in recent predicted recession probabilities
+  - The top 3 features that influenced the recession prediction ranked and visualized
