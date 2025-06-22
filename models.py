@@ -3,7 +3,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 
-models = {
+MODELS = {
     "Logistic regression": (
         make_pipeline(
             StandardScaler(),

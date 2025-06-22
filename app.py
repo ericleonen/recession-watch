@@ -1,6 +1,6 @@
 import streamlit as st
 from data import create_dataset_builder
-from models import models
+from models import MODELS
 from predict import RecessionPredictor
 from helpers import format_months, format_proba, format_pred_phrase
 import altair as alt
@@ -41,8 +41,8 @@ with model_config:
     
     selected_models = st.multiselect(
         label="Models to try",
-        options=models.keys(),
-        default=["Logistic regression", "SVM"],
+        options=MODELS.keys(),
+        default=MODELS.keys(),
         help="Each model is trained on the same training set. Metrics are computed with a 5-fold" \
              "walk-forward optimization split."
     )
