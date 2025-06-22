@@ -1,7 +1,4 @@
 from fredapi import Fred
-from dotenv import load_dotenv
-import os
+import streamlit as st
 
-load_dotenv()
-
-fred = Fred(api_key=os.getenv("FRED_API_KEY"))
+fred = Fred(api_key=st.secrets["FRED_API_KEY"])
