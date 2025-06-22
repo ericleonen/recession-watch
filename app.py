@@ -1,4 +1,11 @@
 import streamlit as st
+
+st.set_page_config(
+    page_title="RecessionWatch",
+    page_icon="🚨",
+    layout="wide"
+)
+
 from data import create_dataset_builder
 from models import MODELS
 from predict import RecessionPredictor, METRICS
@@ -11,12 +18,6 @@ from charts import series_chart
 dataset_builder = create_dataset_builder()
 
 # --- STATIC ---
-
-st.set_page_config(
-    page_title="RecessionWatch",
-    page_icon="🚨",
-    layout="wide"
-)
 
 st.markdown("# 🤬 :red[Recession]Watch")
 
